@@ -589,6 +589,27 @@ def get_db():
         db.close()
         raise e
 
+def ensure_answered_column(df):
+    """Guarantee binary columns indicating whether the site answers a PAA question.
+
+    This helper normalises two related flags so that every downstream aggregation can
+    reliably reference either `answered` **or** `answered_by_site` without raising
+    a KeyError.
+    """
+
+    # Create/overwrite `answered` if it does not exist or contains nulls
+    if 'answered' not in df.columns or df['answered'].isna().any():
+        df['answered'] = df['answer'].apply(
+            lambda x: 1 if len(str(x).strip()) > 10 and not str(x).lower().startswith(("no answer", "not found", "n/a", "none")) else 0
+        )
+
+    # Mirror the same information into `answered_by_site` when missing – many older
+    # aggregations still expect this name.
+    if 'answered_by_site' not in df.columns or df['answered_by_site'].isna().any():
+        df['answered_by_site'] = df['answered']
+
+    return df
+
 # Authentication functions
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
@@ -1652,6 +1673,9 @@ def build_enhanced_overview_df(
     if trends_df.empty:
         return pd.DataFrame()
 
+    # Normalize Q&A flags to prevent KeyError
+    qna_df = ensure_answered_column(qna_df)
+
     # --- Aggregate Q&A metrics ---
     if not qna_df.empty and "answered_by_site" in qna_df.columns:
         qna_summary = (
@@ -1771,6 +1795,62 @@ def build_enhanced_overview_df(
         paa_score * 0.3 +
         feature_score * 0.3
     )
+    
+    # Add position columns
+    from sqlalchemy import asc, desc
+    
+    def get_position(keyword, timestamp, first=False):
+        """Return the best (lowest) organic rank for an exact keyword, ignoring NULLs."""
+        db = get_db()
+        try:
+            # Only exact matches, filter out NULL positions, get best rank
+            q = (
+                db.query(SerpFeature.position)
+                .join(SerpRun, SerpFeature.serp_run_id == SerpRun.id)
+                .join(Keyword, SerpRun.keyword_id == Keyword.id)
+                .filter(
+                    SerpRun.project_id == project_id,
+                    Keyword.keyword == keyword,
+                    SerpFeature.feature_type == "organic",
+                    SerpFeature.position != None,  # Filter out NULL positions
+                    SerpRun.timestamp <= timestamp
+                )
+                .order_by(
+                    SerpRun.timestamp.asc() if first else SerpRun.timestamp.desc(),
+                    SerpFeature.position.asc()  # Get best (lowest) position
+                )
+            )
+            result = q.first()
+            if result:
+                return result[0]
+            
+            return None
+        finally:
+            db.close()
+    
+    # Determine period start and end timestamps from trends_df
+    if not trends_df.empty:
+        start_ts = trends_df['timestamp'].min()
+        end_ts = trends_df['timestamp'].max()
+        
+        # Add position columns
+        overview_df["current_position"] = overview_df["keyword"].apply(
+            lambda kw: get_position(kw, end_ts, first=False)
+        )
+        overview_df["previous_position"] = overview_df["keyword"].apply(
+            lambda kw: get_position(kw, start_ts, first=True)
+        )
+        
+        # Calculate position change
+        overview_df["position_change"] = overview_df.apply(
+            lambda row: row["previous_position"] - row["current_position"] 
+            if row["previous_position"] is not None and row["current_position"] is not None 
+            else None, axis=1
+        )
+    else:
+        overview_df["current_position"] = None
+        overview_df["previous_position"] = None
+        overview_df["position_change"] = None
 
     return overview_df
 
@@ -5382,6 +5462,115 @@ with tab4:
                             mark_alert_read(alert['id'])
                             st.rerun()
         
+        # Overall Visibility Trends Chart
+        st.subheader("📈 Overall Visibility Trends")
+        st.markdown("**Daily average visibility metrics across all keywords**")
+        
+        # Filter trends_df by date range and aggregate by date
+        if not trends_df.empty:
+            # Convert timestamp to date for aggregation
+            trends_df['date'] = pd.to_datetime(trends_df['timestamp']).dt.date
+            
+            # Filter by selected date range
+            mask = (trends_df['date'] >= start_date) & (trends_df['date'] <= end_date)
+            filtered_trends = trends_df[mask].copy()
+            
+            if not filtered_trends.empty:
+                # Aggregate by date and compute daily means
+                daily_metrics = filtered_trends.groupby('date').agg({
+                    'total_score': 'mean',
+                    'organic_score': 'mean', 
+                    'feature_score': 'mean',
+                    'paa_score': 'mean'
+                }).reset_index()
+                
+                # Rename columns for display
+                daily_metrics.columns = ['Date', 'Total Score', 'Organic Score', 'Feature Score', 'PAA Score']
+                
+                # Create the line chart
+                fig = go.Figure()
+                
+                # Add traces for each metric
+                colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']  # Blue, Orange, Green, Red
+                metrics = ['Total Score', 'Organic Score', 'Feature Score', 'PAA Score']
+                
+                for i, metric in enumerate(metrics):
+                    fig.add_trace(go.Scatter(
+                        x=daily_metrics['Date'],
+                        y=daily_metrics[metric],
+                        mode='lines+markers',
+                        name=metric,
+                        line=dict(color=colors[i], width=2),
+                        marker=dict(size=6)
+                    ))
+                
+                # Update layout
+                fig.update_layout(
+                    title="Overall Visibility Trends",
+                    xaxis_title="Date",
+                    yaxis_title="Average Score",
+                    hovermode='x unified',
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    ),
+                    height=400
+                )
+                
+                # Display the chart
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Compute start & end values for trend analysis
+                # assume daily_metrics is sorted by date
+                start = daily_metrics.iloc[0]
+                end = daily_metrics.iloc[-1]
+                
+                diffs = end - start
+                
+                # Define arrow & color function
+                def format_trend(metric_name, current, delta):
+                    arrow = "🔺" if delta >= 0 else "🔻"
+                    color = "green" if delta >= 0 else "red"
+                    return f"{current:.1f} <span style='color:{color}'>{arrow}{abs(delta):.1f}</span>"
+                
+                # Show enhanced summary statistics with trends
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.markdown("#### Avg Total Score")
+                    st.markdown(format_trend(
+                        "Total Score", 
+                        end["Total Score"], 
+                        diffs["Total Score"]
+                    ), unsafe_allow_html=True)
+                with col2:
+                    st.markdown("#### Avg Organic Score")
+                    st.markdown(format_trend(
+                        "Organic Score", 
+                        end["Organic Score"], 
+                        diffs["Organic Score"]
+                    ), unsafe_allow_html=True)
+                with col3:
+                    st.markdown("#### Avg Feature Score")
+                    st.markdown(format_trend(
+                        "Feature Score", 
+                        end["Feature Score"], 
+                        diffs["Feature Score"]
+                    ), unsafe_allow_html=True)
+                with col4:
+                    st.markdown("#### Avg PAA Score")
+                    st.markdown(format_trend(
+                        "PAA Score", 
+                        end["PAA Score"], 
+                        diffs["PAA Score"]
+                    ), unsafe_allow_html=True)
+            else:
+                st.info("No data available for the selected date range.")
+        else:
+            st.info("No trends data available. Run a Live SERP Fetch first to populate the trends.")
+        
         # Enhanced Keyword Overview Table
         st.subheader("📊 Enhanced Keyword Overview")
         st.markdown("**Click a row below to view full PAA Q&A and feature breakdown**")
@@ -5413,21 +5602,25 @@ with tab4:
             
             overview_df['performance_band'] = overview_df['percentile_30d'].apply(get_performance_band)
             
-            # Create feature summary string
-            overview_df['feature_summary'] = overview_df.apply(lambda row: {
-                'has_featured_snippet': "✅" if row.get('has_featured_snippet', False) else "❌",
-                'has_local_pack': "✅" if row.get('has_local_pack', False) else "❌",
-                'has_video': "✅" if row.get('has_video', False) else "❌",
-                'has_knowledge_panel': "✅" if row.get('has_knowledge_panel', False) else "❌",
-                'has_related_searches': "✅" if row.get('has_related_searches', False) else "❌",
-                'has_sitelinks': "✅" if row.get('has_sitelinks', False) else "❌"
-            }, axis=1)
+            # Create individual feature columns with ✅/❌ icons
+            feature_cols = ["has_featured_snippet", "has_local_pack", "has_video", 
+                          "has_knowledge_panel", "has_related_searches", "has_sitelinks"]
             
-            # Prepare display columns
+            # Convert boolean features to ✅/❌ icons
+            def fmt_icon(val): 
+                return "✅" if val else "❌"
+            
+            for feat in feature_cols:
+                if feat in overview_df.columns:
+                    overview_df[feat] = overview_df[feat].apply(fmt_icon)
+                else:
+                    overview_df[feat] = "❌"
+            
+            # Prepare display columns with individual feature columns
             display_cols = [
-                'keyword', 'search_volume', 'real_estate_score', 'paa_score', 
-                'answered_qas', 'total_qas', 'performance_band', 'feature_summary'
-            ]
+                'keyword', 'search_volume', 'current_position', 'previous_position', 'position_change',
+                'real_estate_score', 'paa_score', 'answered_qas', 'total_qas', 'performance_band'
+            ] + feature_cols
             
             # Ensure all columns exist
             for col in display_cols:
@@ -5436,9 +5629,23 @@ with tab4:
             
             display_df = overview_df[display_cols].copy()
             display_df.columns = [
-                'Keyword', 'Search Volume', 'Real Estate Score', 'PAA Score',
-                'Answered Q&A', 'Total Q&A', 'Performance', 'Features'
+                'Keyword', 'Search Volume', 'Current Pos', 'Prev Pos', 'Δ Pos',
+                'Real Estate Score', 'PAA Score', 'Answered Q&A', 'Total Q&A', 'Performance', 
+                'Featured Snippet', 'Local Pack', 'Video', 'Knowledge Panel', 'Related Searches', 'Sitelinks'
             ]
+            
+            # Format the position change column with arrows and colors
+            def format_position_change(row):
+                if pd.isna(row['Δ Pos']) or row['Δ Pos'] is None:
+                    return "—"
+                elif row['Δ Pos'] > 0:
+                    return f"🔺+{row['Δ Pos']}"
+                elif row['Δ Pos'] < 0:
+                    return f"🔻{row['Δ Pos']}"
+                else:
+                    return "➖"
+            
+            display_df['Δ Pos'] = display_df.apply(format_position_change, axis=1)
             
             # Format the answered Q&A column
             display_df['Answered Q&A'] = display_df.apply(
@@ -5462,6 +5669,20 @@ with tab4:
                         format="%d",
                         help="Monthly search volume"
                     ),
+                    "Current Pos": st.column_config.NumberColumn(
+                        "Current Pos",
+                        format="%d",
+                        help="Current organic position"
+                    ),
+                    "Prev Pos": st.column_config.NumberColumn(
+                        "Prev Pos",
+                        format="%d",
+                        help="Previous organic position"
+                    ),
+                    "Δ Pos": st.column_config.TextColumn(
+                        "Δ Pos",
+                        help="Position change (🔺=improved, 🔻=dropped, ➖=no change)"
+                    ),
                     "Real Estate Score": st.column_config.NumberColumn(
                         "Real Estate Score",
                         format="%.1f",
@@ -5476,8 +5697,28 @@ with tab4:
                         "Answered Q&A",
                         help="Owned Q&A / Total Q&A"
                     ),
-                    "Features": st.column_config.TextColumn(
-                        "Features",
+                    "Featured Snippet": st.column_config.TextColumn(
+                        "Featured Snippet",
+                        help="✅=Present, ❌=Not present"
+                    ),
+                    "Local Pack": st.column_config.TextColumn(
+                        "Local Pack",
+                        help="✅=Present, ❌=Not present"
+                    ),
+                    "Video": st.column_config.TextColumn(
+                        "Video",
+                        help="✅=Present, ❌=Not present"
+                    ),
+                    "Knowledge Panel": st.column_config.TextColumn(
+                        "Knowledge Panel",
+                        help="✅=Present, ❌=Not present"
+                    ),
+                    "Related Searches": st.column_config.TextColumn(
+                        "Related Searches",
+                        help="✅=Present, ❌=Not present"
+                    ),
+                    "Sitelinks": st.column_config.TextColumn(
+                        "Sitelinks",
                         help="✅=Present, ❌=Not present"
                     )
                 }
@@ -6695,26 +6936,7 @@ with tab8:
     else:
         st.info("No activity logs found")
 
-def ensure_answered_column(df):
-    """Guarantee binary columns indicating whether the site answers a PAA question.
 
-    This helper normalises two related flags so that every downstream aggregation can
-    reliably reference either `answered` **or** `answered_by_site` without raising
-    a KeyError.
-    """
-
-    # Create/overwrite `answered` if it does not exist or contains nulls
-    if 'answered' not in df.columns or df['answered'].isna().any():
-        df['answered'] = df['answer'].apply(
-            lambda x: 1 if len(str(x).strip()) > 10 and not str(x).lower().startswith(("no answer", "not found", "n/a", "none")) else 0
-        )
-
-    # Mirror the same information into `answered_by_site` when missing – many older
-    # aggregations still expect this name.
-    if 'answered_by_site' not in df.columns or df['answered_by_site'].isna().any():
-        df['answered_by_site'] = df['answered']
-
-    return df
 
 def backfill_qna_records(project_id: int):
     """Backfill existing QnaRecord entries with correct search_volume and answered_by_site values.
