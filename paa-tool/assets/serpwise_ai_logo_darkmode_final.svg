@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 440 100">
+  <!-- Generator: Adobe Illustrator 29.6.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 9)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#Naamloos_verloop_58);
+      }
+
+      .st1 {
+        fill: url(#Naamloos_verloop_51);
+      }
+
+      .st2 {
+        fill: url(#Naamloos_verloop_40);
+      }
+
+      .st3 {
+        fill: #fff;
+        font-family: Helvetica-Bold, Helvetica;
+        font-size: 48px;
+        font-weight: 700;
+        isolation: isolate;
+      }
+
+      .st4 {
+        fill: url(#Naamloos_verloop_511);
+      }
+
+      .st5 {
+        fill: url(#Naamloos_verloop_2);
+      }
+
+      .st6 {
+        fill: url(#Naamloos_verloop_4);
+      }
+
+      .st7 {
+        fill: url(#Naamloos_verloop_3);
+      }
+
+      .st8 {
+        display: none;
+      }
+    </style>
+    <linearGradient id="Naamloos_verloop_40" data-name="Naamloos verloop 40" x1="234" y1="58.02" x2="281.02" y2="58.02" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6a00"/>
+      <stop offset="0" stop-color="#ff6805"/>
+      <stop offset="1" stop-color="#ff2d92"/>
+    </linearGradient>
+    <linearGradient id="Naamloos_verloop_2" data-name="Naamloos verloop 2" x1="-554.25" y1="541.6" x2="-553.25" y2="541.6" gradientTransform="translate(2447 5449) scale(4 -10)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6a00"/>
+      <stop offset="1" stop-color="#ff2d92"/>
+    </linearGradient>
+    <linearGradient id="Naamloos_verloop_3" data-name="Naamloos verloop 3" x1="-554.25" y1="563.33" x2="-553.25" y2="563.33" gradientTransform="translate(2456 10169) scale(4 -18)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6a00"/>
+      <stop offset="1" stop-color="#ff2d92"/>
+    </linearGradient>
+    <linearGradient id="Naamloos_verloop_4" data-name="Naamloos verloop 4" x1="-554.25" y1="571.69" x2="-553.25" y2="571.69" gradientTransform="translate(2465 14889) scale(4 -26)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6a00"/>
+      <stop offset="1" stop-color="#ff2d92"/>
+    </linearGradient>
+    <linearGradient id="Naamloos_verloop_58" data-name="Naamloos verloop 58" x1="299.38" y1="32.64" x2="296.97" y2="-33.76" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6a00"/>
+      <stop offset="1" stop-color="#ff2d92"/>
+    </linearGradient>
+    <linearGradient id="Naamloos_verloop_51" data-name="Naamloos verloop 51" x1="319.49" y1="31.82" x2="317.08" y2="-34.59" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6a00"/>
+      <stop offset="0" stop-color="#ff6805"/>
+      <stop offset="1" stop-color="#ff2d92"/>
+    </linearGradient>
+    <linearGradient id="Naamloos_verloop_511" data-name="Naamloos verloop 51" x1="339.98" y1="32.96" x2="337.56" y2="-33.45" xlink:href="#Naamloos_verloop_51"/>
+  </defs>
+  <g id="Laag_1">
+    <text class="st3" transform="translate(20 75)"><tspan x="0" y="0">serpwise</tspan></text>
+    <path class="st2" d="M234,68.02h7.1v6.98h-7.1v-6.98ZM248.41,52.22c1.77-2.25,4.8-3.38,9.09-3.38,2.8,0,5.28.55,7.45,1.66s3.26,3.2,3.26,6.28v11.72c0,.81.02,1.8.05,2.95.05.88.18,1.47.4,1.78s.55.57.98.77v.98h-7.27c-.2-.52-.34-1-.42-1.45s-.14-.97-.19-1.55c-.92,1-1.98,1.85-3.19,2.55-1.44.83-3.06,1.24-4.88,1.24-2.31,0-4.22-.66-5.73-1.98s-2.26-3.19-2.26-5.61c0-3.14,1.21-5.41,3.63-6.82,1.33-.77,3.28-1.31,5.86-1.64l2.27-.28c1.23-.16,2.12-.35,2.65-.59.95-.41,1.43-1.04,1.43-1.9,0-1.05-.36-1.77-1.09-2.17s-1.79-.6-3.2-.6c-1.58,0-2.7.39-3.35,1.17-.47.58-.78,1.36-.94,2.34h-6.45c.14-2.23.77-4.07,1.88-5.51ZM253.38,70.17c.62.52,1.39.77,2.3.77,1.44,0,2.76-.42,3.97-1.27s1.84-2.38,1.89-4.62v-2.48c-.42.27-.85.48-1.28.64s-1.02.32-1.77.46l-1.5.28c-1.41.25-2.41.55-3.02.91-1.03.61-1.55,1.55-1.55,2.84,0,1.14.32,1.96.96,2.46ZM281.02,40.24v6.16h-6.77v-6.16h6.77ZM281.02,49.45v25.55h-6.77v-25.55h6.77Z"/>
+    <rect class="st5" x="230" y="28" width="4" height="10" rx="1" ry="1"/>
+    <rect class="st7" x="239" y="20" width="4" height="18" rx="1" ry="1"/>
+    <rect class="st6" x="248" y="12" width="4" height="26" rx="1" ry="1"/>
+  </g>
+  <g id="Laag_2" class="st8">
+    <path class="st0" d="M295.04,7.36h7.1v6.98h-7.1v-6.98Z"/>
+    <path class="st1" d="M309.45-8.44c1.77-2.25,4.8-3.38,9.09-3.38,2.8,0,5.28.55,7.45,1.66s3.26,3.2,3.26,6.28V7.85c0,.81.02,1.8.05,2.95.05.88.18,1.47.4,1.78s.55.57.98.77v.98h-7.27c-.2-.52-.34-1-.42-1.45s-.14-.97-.19-1.55c-.92,1-1.98,1.85-3.19,2.55-1.44.83-3.06,1.24-4.88,1.24-2.31,0-4.22-.66-5.73-1.98s-2.26-3.19-2.26-5.61c0-3.14,1.21-5.41,3.63-6.82,1.33-.77,3.28-1.31,5.86-1.64l2.27-.28c1.23-.16,2.12-.35,2.65-.59.95-.41,1.43-1.04,1.43-1.9,0-1.05-.36-1.77-1.09-2.17s-1.79-.6-3.2-.6c-1.58,0-2.7.39-3.35,1.17-.47.58-.78,1.36-.94,2.34h-6.45c.14-2.23.77-4.07,1.88-5.51ZM314.42,9.51c.62.52,1.39.77,2.3.77,1.44,0,2.76-.42,3.97-1.27s1.84-2.38,1.89-4.62V1.92c-.42.27-.85.48-1.28.64s-1.02.32-1.77.46l-1.5.28c-1.41.25-2.41.55-3.02.91-1.03.61-1.55,1.55-1.55,2.84,0,1.14.32,1.96.96,2.46Z"/>
+    <path class="st4" d="M342.05-20.42v6.16h-6.77v-6.16h6.77ZM342.05-11.2V14.34h-6.77V-11.2h6.77Z"/>
+  </g>
+</svg>
